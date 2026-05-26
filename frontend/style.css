@@ -201,6 +201,7 @@ body::before {
   border: 1px solid var(--border-light);
   transition: box-shadow var(--duration-normal) var(--ease-out);
   animation: fadeInUp 0.45s var(--ease-out) both;
+  overflow-x: hidden; min-width: 0;
 }
 .card:nth-child(1) { animation-delay: 0s; }
 .card:nth-child(2) { animation-delay: 0.08s; }
@@ -451,11 +452,12 @@ body::before {
 .form-group { margin-top: 20px; }
 .form-group label { display: block; font-size: var(--fs-sm); font-weight: 600; margin-bottom: 8px; color: var(--text); }
 .form-group textarea {
-  width: 100%; padding: 14px; border: 1.5px solid var(--border);
+  width: 100%; max-width: 100%; padding: 14px; border: 1.5px solid var(--border);
   border-radius: var(--radius); font-size: var(--fs-base);
   font-family: inherit; line-height: 1.6;
   resize: vertical; outline: none;
   background: var(--surface-alt);
+  overflow-wrap: break-word;
   transition: all var(--duration-fast) var(--ease-out);
 }
 .form-group textarea:focus {
