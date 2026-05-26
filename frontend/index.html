@@ -1,207 +1,345 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI 智能简历分析系统</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', '"PingFang SC"', '"Microsoft YaHei"', 'system-ui', 'sans-serif'],
+        mono: ['"SF Mono"', '"Cascadia Code"', '"Fira Code"', '"Menlo"', 'monospace'],
+      },
+      animation: {
+        'float': 'float 8s ease-in-out infinite',
+        'float-delayed': 'float 10s ease-in-out 1s infinite',
+        'float-slow': 'float 12s ease-in-out 2s infinite',
+        'pulse-glow': 'pulseGlow 2.5s ease-in-out infinite',
+        'shimmer': 'shimmer 1.6s ease-in-out infinite',
+        'fade-in-up': 'fadeInUp 0.5s cubic-bezier(0.16,1,0.3,1) both',
+        'fade-in': 'fadeIn 0.4s ease-out both',
+        'orbital': 'orbital 3s linear infinite',
+        'orbital-rev': 'orbital 2s linear reverse infinite',
+        'orbital-fast': 'orbital 1.4s linear infinite',
+        'breathe': 'breathe 1.5s ease-in-out infinite',
+        'slide-right': 'slideRight 1.2s cubic-bezier(0.16,1,0.3,1) infinite',
+        'dot-pulse': 'dotPulse 2s ease-in-out infinite',
+      },
+      keyframes: {
+        float: {
+          '0%,100%': { transform: 'translateY(0px) rotate(0deg)' },
+          '33%': { transform: 'translateY(-12px) rotate(1deg)' },
+          '66%': { transform: 'translateY(6px) rotate(-1deg)' },
+        },
+        pulseGlow: {
+          '0%,100%': { boxShadow: '0 0 0 3px rgba(99,102,241,0.18)' },
+          '50%': { boxShadow: '0 0 0 8px rgba(99,102,241,0.06)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        },
+        fadeInUp: {
+          from: { opacity: '0', transform: 'translateY(16px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        fadeIn: {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
+        orbital: {
+          to: { transform: 'rotate(360deg)' },
+        },
+        breathe: {
+          '0%,100%': { transform: 'scale(1)', opacity: '0.6' },
+          '50%': { transform: 'scale(1.3)', opacity: '1' },
+        },
+        slideRight: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
+        dotPulse: {
+          '0%,100%': { opacity: '1' },
+          '50%': { opacity: '0.3' },
+        },
+      },
+    },
+  },
+}
+</script>
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
-<div id="app">
+<body class="min-h-screen bg-slate-950 text-white antialiased overflow-x-hidden">
+
+<!-- ====== Animated Background Orbs ====== -->
+<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+  <div class="absolute -top-1/4 -left-1/4 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-indigo-500/25 via-violet-500/15 to-transparent blur-3xl animate-float"></div>
+  <div class="absolute top-1/2 -right-1/4 w-[500px] h-[500px] rounded-full bg-gradient-to-bl from-fuchsia-500/20 via-purple-500/10 to-transparent blur-3xl animate-float-delayed"></div>
+  <div class="absolute -bottom-1/4 left-1/3 w-[450px] h-[450px] rounded-full bg-gradient-to-tr from-cyan-500/15 via-indigo-500/10 to-transparent blur-3xl animate-float-slow"></div>
+  <div class="absolute top-1/3 left-1/2 w-[300px] h-[300px] rounded-full bg-violet-400/10 blur-3xl animate-float-delayed"></div>
+  <!-- Subtle grid overlay -->
+  <div class="absolute inset-0 opacity-[0.03]" style="background-image: radial-gradient(circle, rgb(148,163,255) 1px, transparent 1px); background-size: 32px 32px;"></div>
+</div>
+
+<div id="app" class="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12 pb-20">
+
   <!-- ====== Header ====== -->
-  <header class="header">
-    <h1>AI 智能简历分析系统</h1>
-    <span class="api-badge" :class="{ online: apiOnline }">
+  <header class="flex items-center justify-between pb-6 mb-8 border-b border-white/[0.06]">
+    <h1 class="text-xl sm:text-2xl font-bold tracking-tight">
+      <span class="bg-gradient-to-r from-indigo-300 via-violet-200 to-purple-300 bg-clip-text text-transparent">AI 智能简历分析系统</span>
+    </h1>
+    <span class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border"
+          :class="apiOnline
+            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'">
+      <span class="w-1.5 h-1.5 rounded-full animate-dot-pulse" :class="apiOnline ? 'bg-emerald-400' : 'bg-rose-400'"></span>
       {{ apiOnline ? 'API 在线' : 'API 离线' }}
     </span>
   </header>
 
   <!-- ====== Step Indicator ====== -->
-  <nav class="steps">
-    <div class="step" :class="{ active: step === 'upload', done: step !== 'upload' }">
-      <span class="step-num">1</span> 上传简历
+  <nav class="flex items-center justify-center gap-0 mb-10">
+    <div class="flex items-center gap-2 text-xs sm:text-sm font-medium px-3 sm:px-4 py-2 sm:py-2.5 rounded-full border transition-all duration-300"
+         :class="step === 'upload' ? 'bg-indigo-500/10 border-indigo-400/30 text-indigo-300 animate-pulse-glow' : (step !== 'upload' ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' : 'bg-white/[0.03] border-white/[0.06] text-white/30')">
+      <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold"
+            :class="step === 'upload' ? 'bg-indigo-500 text-white' : (step !== 'upload' ? 'bg-emerald-500/80 text-white' : 'bg-white/10 text-white/40')">1</span>
+      上传简历
     </div>
-    <div class="step-connector" :class="{ done: step !== 'upload' && step !== 'parsed' && step !== 'extracting', active: step === 'parsed' || step === 'extracting' }"></div>
-    <div class="step" :class="{ active: step === 'parsed' || step === 'extracting', done: step === 'extracted' || step === 'matching' || step === 'matched' }">
-      <span class="step-num">2</span> AI 提取
+    <div class="w-8 sm:w-12 h-px mx-1 rounded-full overflow-hidden" :class="step !== 'upload' && step !== 'parsed' && step !== 'extracting' ? 'bg-emerald-500/40' : 'bg-white/[0.06]'">
+      <div v-if="step === 'parsed' || step === 'extracting'" class="w-full h-full bg-indigo-400 rounded-full animate-slide-right"></div>
     </div>
-    <div class="step-connector" :class="{ done: step === 'matched', active: step === 'matching' }"></div>
-    <div class="step" :class="{ active: step === 'matching', done: step === 'matched' }">
-      <span class="step-num">3</span> 岗位匹配
+    <div class="flex items-center gap-2 text-xs sm:text-sm font-medium px-3 sm:px-4 py-2 sm:py-2.5 rounded-full border transition-all duration-300"
+         :class="(step === 'parsed' || step === 'extracting') ? 'bg-indigo-500/10 border-indigo-400/30 text-indigo-300 animate-pulse-glow' : ((step === 'extracted' || step === 'matching' || step === 'matched') ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' : 'bg-white/[0.03] border-white/[0.06] text-white/30')">
+      <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold"
+            :class="(step === 'parsed' || step === 'extracting') ? 'bg-indigo-500 text-white' : ((step === 'extracted' || step === 'matching' || step === 'matched') ? 'bg-emerald-500/80 text-white' : 'bg-white/10 text-white/40')">2</span>
+      AI 提取
+    </div>
+    <div class="w-8 sm:w-12 h-px mx-1 rounded-full overflow-hidden" :class="step === 'matched' ? 'bg-emerald-500/40' : 'bg-white/[0.06]'">
+      <div v-if="step === 'matching'" class="w-full h-full bg-indigo-400 rounded-full animate-slide-right"></div>
+    </div>
+    <div class="flex items-center gap-2 text-xs sm:text-sm font-medium px-3 sm:px-4 py-2 sm:py-2.5 rounded-full border transition-all duration-300"
+         :class="step === 'matching' ? 'bg-indigo-500/10 border-indigo-400/30 text-indigo-300 animate-pulse-glow' : (step === 'matched' ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' : 'bg-white/[0.03] border-white/[0.06] text-white/30')">
+      <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold"
+            :class="step === 'matching' ? 'bg-indigo-500 text-white' : (step === 'matched' ? 'bg-emerald-500/80 text-white' : 'bg-white/10 text-white/40')">3</span>
+      岗位匹配
     </div>
   </nav>
 
   <!-- ====== Error Banner ====== -->
-  <div class="error-banner" v-if="error" @click="error = null">
-    {{ error }}
-    <span class="close-hint">(点击关闭)</span>
-  </div>
+  <transition name="fade">
+    <div v-if="error" @click="error = null"
+         class="mb-6 px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm font-medium cursor-pointer hover:bg-rose-500/15 transition-all duration-200 animate-fade-in-up flex items-center justify-between">
+      <span>{{ error }}</span>
+      <span class="text-white/30 text-xs ml-2 shrink-0">点击关闭</span>
+    </div>
+  </transition>
 
   <!-- ====== Step 1: Upload ====== -->
-  <section class="card upload-card" v-show="step === 'upload'">
-    <div class="drop-zone" :class="{ dragover: isDragover }"
+  <section v-show="step === 'upload'" class="animate-fade-in-up">
+    <div class="relative group cursor-pointer rounded-2xl border-2 border-dashed transition-all duration-300 p-10 sm:p-14 text-center"
+         :class="isDragover
+           ? 'border-indigo-400 bg-indigo-500/10 scale-[1.01] shadow-[0_0_40px_rgba(99,102,241,0.15)]'
+           : 'border-white/[0.08] bg-white/[0.02] hover:border-indigo-400/40 hover:bg-indigo-500/[0.04] hover:shadow-[0_0_30px_rgba(99,102,241,0.08)]'"
+         style="backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);"
          @dragover.prevent="isDragover = true"
          @dragleave="isDragover = false"
          @drop.prevent="handleDrop"
          @click="triggerFileInput"
-         @mousemove="onDropZoneMouseMove">
+         @mousemove="onDropZoneMouseMove"
+         ref="dropZone">
       <input type="file" ref="fileInput" accept=".pdf" @change="handleFileSelect" hidden>
-      <div class="upload-icon">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+
+      <!-- Upload Icon -->
+      <div class="mb-5 transition-all duration-300 group-hover:-translate-y-1 opacity-40 group-hover:opacity-70">
+        <svg class="w-14 h-14 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/>
+          <polyline points="9 15 12 12 15 15"/>
+        </svg>
       </div>
-      <p class="upload-title">点击上传或拖拽 PDF 简历到此处</p>
-      <p class="upload-hint">支持 .pdf 格式，≤10MB，≤10页</p>
+      <p class="text-base sm:text-lg font-semibold text-white/80 mb-2">点击上传或拖拽 PDF 简历到此处</p>
+      <p class="text-sm text-white/30">支持 .pdf 格式，≤10MB，≤10 页</p>
     </div>
-    <div class="upload-progress" v-if="loading">
-      <div class="upload-progress-bar"></div>
+
+    <!-- Upload Progress -->
+    <div v-if="loading" class="mt-4 h-0.5 bg-white/[0.04] rounded-full overflow-hidden">
+      <div class="h-full bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 rounded-full animate-slide-right"></div>
     </div>
-    <div class="loading-spinner" v-if="loading">正在解析简历...</div>
+    <div v-if="loading" class="flex items-center justify-center gap-2.5 mt-4 text-sm text-white/40">
+      <div class="w-4 h-4 border-2 border-white/10 border-t-indigo-400 rounded-full animate-spin"></div>
+      正在解析简历...
+    </div>
   </section>
 
-  <!-- ====== Step 2: Parsed Result + Extract ====== -->
-  <section class="card" v-if="step === 'parsed' || step === 'extracting' || step === 'extracted' || step === 'matching' || step === 'matched'">
-    <div class="card-header">
-      <h2>简历解析结果</h2>
-      <span class="file-tag">{{ fileInfo.fileName }} ({{ fileInfo.pages }} 页)</span>
+  <!-- ====== Step 2: Parsed + Extract ====== -->
+  <section v-if="step === 'parsed' || step === 'extracting' || step === 'extracted' || step === 'matching' || step === 'matched'"
+           class="rounded-2xl border border-white/[0.06] p-6 sm:p-8 mb-6 animate-fade-in-up"
+           style="background: rgba(255,255,255,0.02); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-5 flex-wrap gap-2">
+      <h2 class="text-base font-semibold text-white/80">简历解析结果</h2>
+      <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+        {{ fileInfo.fileName }} ({{ fileInfo.pages }} 页)
+      </span>
     </div>
 
     <!-- Cleaned Text -->
-    <details class="text-block" open>
-      <summary>清洗后文本</summary>
-      <pre>{{ cleanedText }}</pre>
+    <details class="mb-5" open>
+      <summary class="cursor-pointer text-sm font-semibold text-indigo-300 hover:text-indigo-200 transition-colors select-none mb-2.5">清洗后文本</summary>
+      <pre class="text-xs sm:text-sm leading-relaxed text-white/50 bg-black/20 border border-white/[0.04] rounded-xl p-4 max-h-72 overflow-y-auto whitespace-pre-wrap break-words font-mono">{{ cleanedText }}</pre>
     </details>
 
-    <!-- Extract Button (before extraction) -->
-    <button v-if="step === 'parsed'" class="btn btn-primary" @click="doExtract" :disabled="loading">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <!-- Extract Button -->
+    <button v-if="step === 'parsed'" @click="doExtract" :disabled="loading"
+            class="relative overflow-hidden inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200
+                   bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500
+                   hover:from-indigo-400 hover:via-violet-400 hover:to-purple-400
+                   hover:shadow-[0_4px_24px_rgba(99,102,241,0.35)] hover:-translate-y-0.5
+                   active:translate-y-0
+                   disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+      <span class="absolute inset-0 bg-gradient-to-r from-transparent via-white/8 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-500"></span>
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
       AI 提取关键信息
     </button>
 
     <!-- Extraction Animation -->
-    <div class="extract-stage" v-if="step === 'extracting'">
-      <div class="extract-orbital">
-        <div class="extract-orbital-ring"></div>
-        <div class="extract-orbital-ring"></div>
-        <div class="extract-orbital-ring"></div>
-        <div class="extract-orbital-core"></div>
+    <div v-if="step === 'extracting'" class="flex flex-col items-center gap-5 py-8">
+      <!-- Orbital spinner -->
+      <div class="relative w-20 h-20">
+        <div class="absolute inset-0 rounded-full border-2 border-white/[0.04] animate-orbital"></div>
+        <div class="absolute inset-2.5 rounded-full border-2 border-indigo-400/20 animate-orbital-rev"></div>
+        <div class="absolute inset-5 rounded-full border-2 border-indigo-400/40 animate-orbital-fast"></div>
+        <div class="absolute inset-[30px] rounded-full bg-indigo-400/70 animate-breathe"></div>
       </div>
-      <div class="extract-status-text">
-        {{ extractStatusText }}<span class="extract-dots"></span>
+      <div class="text-sm font-semibold text-white/60">
+        {{ extractStatusText }}<span class="inline-block w-4 text-left">...</span>
       </div>
 
-      <!-- Skeleton placeholders -->
-      <div class="skeleton-grid" style="width:100%;">
-        <div class="skeleton-card"><div class="skeleton"></div><div class="skeleton"></div></div>
-        <div class="skeleton-card"><div class="skeleton"></div><div class="skeleton"></div></div>
-        <div class="skeleton-card"><div class="skeleton"></div><div class="skeleton"></div></div>
-        <div class="skeleton-card"><div class="skeleton"></div><div class="skeleton"></div></div>
-        <div class="skeleton-card"><div class="skeleton"></div><div class="skeleton"></div></div>
-        <div class="skeleton-card"><div class="skeleton"></div><div class="skeleton"></div></div>
-        <div class="skeleton-card wide"><div class="skeleton"></div><div class="skeleton"></div></div>
-        <div class="skeleton-card wide"><div class="skeleton"></div><div class="skeleton"></div></div>
+      <!-- Skeleton Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 w-full mt-2">
+        <template v-for="i in 8" :key="i">
+          <div :class="i >= 7 ? 'col-span-2 sm:col-span-3' : ''" class="rounded-xl bg-white/[0.03] border border-white/[0.04] p-3.5">
+            <div class="h-2.5 w-1/3 rounded mb-2.5 animate-shimmer" style="background: linear-gradient(100deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 40%, rgba(255,255,255,0.03) 55%); background-size: 200% 100%;"></div>
+            <div class="h-4 w-2/3 rounded animate-shimmer" style="background: linear-gradient(100deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 40%, rgba(255,255,255,0.03) 55%); background-size: 200% 100%;"></div>
+          </div>
+        </template>
       </div>
     </div>
 
     <!-- Extracted Info Cards -->
-    <div class="info-grid" v-if="extractedInfo">
-      <div class="info-section-title">提取信息</div>
-      <div class="info-card">
-        <div class="info-label">姓名</div>
-        <div class="info-value">{{ extractedInfo.name || '—' }}</div>
-      </div>
-      <div class="info-card">
-        <div class="info-label">电话</div>
-        <div class="info-value">{{ extractedInfo.phone || '—' }}</div>
-      </div>
-      <div class="info-card">
-        <div class="info-label">邮箱</div>
-        <div class="info-value">{{ extractedInfo.email || '—' }}</div>
-      </div>
-      <div class="info-card">
-        <div class="info-label">地址</div>
-        <div class="info-value">{{ extractedInfo.address || '—' }}</div>
-      </div>
-      <div class="info-card" v-if="extractedInfo.jobIntention !== undefined">
-        <div class="info-label">求职意向</div>
-        <div class="info-value">{{ extractedInfo.jobIntention || '—' }}</div>
-      </div>
-      <div class="info-card" v-if="extractedInfo.workYears !== undefined">
-        <div class="info-label">工作年限</div>
-        <div class="info-value">{{ extractedInfo.workYears != null ? extractedInfo.workYears + ' 年' : '—' }}</div>
-      </div>
-      <div class="info-card wide" v-if="extractedInfo.education">
-        <div class="info-label">教育背景</div>
-        <div class="info-value">
-          {{ [extractedInfo.education.degree, extractedInfo.education.school, extractedInfo.education.major, extractedInfo.education.graduationYear ? extractedInfo.education.graduationYear + '年毕业' : ''].filter(Boolean).join(' · ') || '—' }}
-        </div>
-      </div>
-      <div class="info-card wide" v-if="extractedInfo.projects && extractedInfo.projects.length">
-        <div class="info-label">项目经历 ({{ extractedInfo.projects.length }})</div>
-        <div class="info-value">
-          <ul class="project-list">
-            <li v-for="(p, i) in extractedInfo.projects" :key="i">
-              <strong>{{ p.name }}</strong>
-              <span v-if="p.role"> — {{ p.role }}</span>
-              <span class="tech-tags" v-if="p.techStack && p.techStack.length">
-                <span class="tag" v-for="t in p.techStack" :key="t">{{ t }}</span>
-              </span>
-            </li>
-          </ul>
-        </div>
+    <div v-if="extractedInfo" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-5">
+      <div class="col-span-2 sm:col-span-3 text-xs font-bold text-white/50 uppercase tracking-wider mb-1">提取信息</div>
+
+      <div v-for="(card, idx) in infoCards" :key="idx"
+           :class="card.wide ? 'col-span-2 sm:col-span-3' : ''"
+           class="rounded-xl bg-white/[0.03] border border-white/[0.04] p-3.5 transition-all duration-200 hover:bg-white/[0.05] hover:border-white/[0.08] animate-fade-in-up"
+           :style="{ animationDelay: (idx * 0.06) + 's' }">
+        <div class="text-[10px] font-medium text-white/30 uppercase tracking-wider mb-1">{{ card.label }}</div>
+        <div class="text-sm font-semibold text-white/70" v-html="card.value"></div>
       </div>
     </div>
   </section>
 
   <!-- ====== Step 3: Match ====== -->
-  <section class="card" v-if="step === 'extracted' || step === 'matching' || step === 'matched'">
-    <div class="card-header"><h2>岗位匹配</h2></div>
+  <section v-if="step === 'extracted' || step === 'matching' || step === 'matched'"
+           class="rounded-2xl border border-white/[0.06] p-6 sm:p-8 mb-6 animate-fade-in-up"
+           style="background: rgba(255,255,255,0.02); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);">
 
-    <!-- Job Description Input -->
-    <div class="form-group" v-if="step !== 'matched'">
-      <label for="jobDesc">请输入岗位需求描述</label>
-      <textarea id="jobDesc" v-model="jobDescription" rows="5"
-                placeholder="例：招聘高级前端工程师，要求 5 年以上经验，精通 Vue3/TypeScript，本科及以上学历，有大型项目架构经验..."></textarea>
-      <button class="btn btn-primary" @click="doMatch" :disabled="loading || !jobDescription.trim()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <div class="mb-5"><h2 class="text-base font-semibold text-white/80">岗位匹配</h2></div>
+
+    <!-- Job Input -->
+    <div v-if="step !== 'matched'" class="mb-5">
+      <label class="block text-sm font-semibold text-white/60 mb-2.5">请输入岗位需求描述</label>
+      <textarea v-model="jobDescription" rows="5"
+                class="w-full max-w-full p-3.5 rounded-xl text-sm leading-relaxed resize-y outline-none transition-all duration-200
+                       bg-white/[0.03] border border-white/[0.08] text-white/80 placeholder:text-white/20
+                       focus:border-indigo-400/40 focus:bg-white/[0.05] focus:shadow-[0_0_0_3px_rgba(99,102,241,0.1)]
+                       overflow-wrap-break-word"
+                placeholder="例：招聘高级前端工程师，要求 5 年以上经验，精通 Vue3 / TypeScript，本科及以上学历，有大型项目架构经验..."></textarea>
+      <button @click="doMatch" :disabled="loading || !jobDescription.trim()"
+              class="relative overflow-hidden inline-flex items-center gap-2 mt-4 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200
+                     bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500
+                     hover:from-indigo-400 hover:via-violet-400 hover:to-purple-400
+                     hover:shadow-[0_4px_24px_rgba(99,102,241,0.35)] hover:-translate-y-0.5
+                     active:translate-y-0
+                     disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         {{ loading ? '评分中...' : '开始匹配评分' }}
       </button>
-      <div class="loading-spinner" v-if="step === 'matching'">AI 正在分析匹配度...</div>
+      <div v-if="step === 'matching'" class="flex items-center justify-center gap-2.5 mt-4 text-sm text-white/40">
+        <div class="w-4 h-4 border-2 border-white/10 border-t-indigo-400 rounded-full animate-spin"></div>
+        AI 正在分析匹配度...
+      </div>
     </div>
 
     <!-- Match Result -->
-    <div class="match-result" v-if="matchResult">
-      <!-- Score Rings — hierarchical: 1 primary + 3 compact -->
-      <div class="rings-row">
-        <score-ring label="综合评分" :value="displayScores.total" color="var(--accent)" :primary="true"></score-ring>
-        <score-ring label="技能匹配" :value="displayScores.skill" color="oklch(0.55 0.15 235)"></score-ring>
-        <score-ring label="经验相关" :value="displayScores.experience" color="oklch(0.62 0.16 75)"></score-ring>
-        <score-ring label="学历匹配" :value="displayScores.education" color="oklch(0.55 0.17 155)"></score-ring>
+    <div v-if="matchResult" class="space-y-5">
+      <!-- Score Rings -->
+      <div class="flex items-center justify-center gap-6 sm:gap-8 flex-wrap py-4 animate-fade-in-up">
+        <score-ring label="综合评分" :value="displayScores.total" color="url(#gradAccent)" :primary="true"></score-ring>
+        <score-ring label="技能匹配" :value="displayScores.skill" color="#818cf8"></score-ring>
+        <score-ring label="经验相关" :value="displayScores.experience" color="#f59e0b"></score-ring>
+        <score-ring label="学历匹配" :value="displayScores.education" color="#34d399"></score-ring>
       </div>
 
       <!-- Summary -->
-      <div class="match-block" v-if="matchResult.summary">
-        <h4>匹配总结</h4>
-        <p>{{ matchResult.summary }}</p>
+      <div v-if="matchResult.summary" class="rounded-xl bg-white/[0.03] border border-white/[0.04] p-4 animate-fade-in-up" style="animation-delay:0.1s">
+        <h4 class="text-sm font-semibold text-white/70 mb-2">匹配总结</h4>
+        <p class="text-sm text-white/50 leading-relaxed">{{ matchResult.summary }}</p>
       </div>
 
       <!-- Strengths + Missing -->
-      <div class="two-col">
-        <div class="match-block" v-if="matchResult.strengths && matchResult.strengths.length">
-          <h4>优势点</h4>
-          <ul><li v-for="s in matchResult.strengths" :key="s">{{ s }}</li></ul>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div v-if="matchResult.strengths && matchResult.strengths.length"
+             class="rounded-xl bg-white/[0.03] border border-white/[0.04] p-4 animate-fade-in-up" style="animation-delay:0.15s">
+          <h4 class="text-sm font-semibold text-white/70 mb-2.5">优势点</h4>
+          <ul class="space-y-1.5">
+            <li v-for="(s, i) in matchResult.strengths" :key="s"
+                class="text-sm text-white/50 flex items-start gap-2 animate-fade-in-up"
+                :style="{ animationDelay: (0.2 + i * 0.05) + 's' }">
+              <span class="w-1 h-1 rounded-full bg-indigo-400 mt-2 shrink-0"></span>{{ s }}
+            </li>
+          </ul>
         </div>
-        <div class="match-block" v-if="matchResult.missingKeywords && matchResult.missingKeywords.length">
-          <h4>缺失关键词</h4>
-          <ul><li v-for="k in matchResult.missingKeywords" :key="k">{{ k }}</li></ul>
+        <div v-if="matchResult.missingKeywords && matchResult.missingKeywords.length"
+             class="rounded-xl bg-white/[0.03] border border-white/[0.04] p-4 animate-fade-in-up" style="animation-delay:0.15s">
+          <h4 class="text-sm font-semibold text-white/70 mb-2.5">缺失关键词</h4>
+          <ul class="space-y-1.5">
+            <li v-for="(k, i) in matchResult.missingKeywords" :key="k"
+                class="text-sm text-white/50 flex items-start gap-2 animate-fade-in-up"
+                :style="{ animationDelay: (0.2 + i * 0.05) + 's' }">
+              <span class="w-1 h-1 rounded-full bg-amber-400 mt-2 shrink-0"></span>{{ k }}
+            </li>
+          </ul>
         </div>
       </div>
 
       <!-- Re-match -->
-      <button class="btn btn-outline" v-if="step === 'matched'" @click="resetMatch">
+      <button v-if="step === 'matched'" @click="resetMatch"
+              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200
+                     bg-transparent text-indigo-300 border border-indigo-500/30
+                     hover:bg-indigo-500/10 hover:border-indigo-400/50">
         更换岗位重新匹配
       </button>
     </div>
   </section>
+
+  <!-- SVG Gradients (for score rings) -->
+  <svg width="0" height="0" class="absolute">
+    <defs>
+      <linearGradient id="gradAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#818cf8"/>
+        <stop offset="50%" stop-color="#a78bfa"/>
+        <stop offset="100%" stop-color="#c084fc"/>
+      </linearGradient>
+    </defs>
+  </svg>
 </div>
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
