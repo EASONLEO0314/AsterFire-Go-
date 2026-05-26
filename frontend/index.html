@@ -21,11 +21,11 @@
     <div class="step" :class="{ active: step === 'upload', done: step !== 'upload' }">
       <span class="step-num">1</span> 上传简历
     </div>
-    <div class="step-arrow">→</div>
+    <div class="step-connector" :class="{ done: step !== 'upload' && step !== 'parsed' && step !== 'extracting', active: step === 'parsed' || step === 'extracting' }"></div>
     <div class="step" :class="{ active: step === 'parsed' || step === 'extracting', done: step === 'extracted' || step === 'matching' || step === 'matched' }">
       <span class="step-num">2</span> AI 提取
     </div>
-    <div class="step-arrow">→</div>
+    <div class="step-connector" :class="{ done: step === 'matched', active: step === 'matching' }"></div>
     <div class="step" :class="{ active: step === 'matching', done: step === 'matched' }">
       <span class="step-num">3</span> 岗位匹配
     </div>
@@ -43,15 +43,19 @@
          @dragover.prevent="isDragover = true"
          @dragleave="isDragover = false"
          @drop.prevent="handleDrop"
-         @click="triggerFileInput">
+         @click="triggerFileInput"
+         @mousemove="onDropZoneMouseMove">
       <input type="file" ref="fileInput" accept=".pdf" @change="handleFileSelect" hidden>
       <div class="upload-icon">
-        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
       </div>
       <p class="upload-title">点击上传或拖拽 PDF 简历到此处</p>
       <p class="upload-hint">支持 .pdf 格式，≤10MB，≤10页</p>
     </div>
-    <div class="loading-bar" v-if="loading">正在解析简历...</div>
+    <div class="upload-progress" v-if="loading">
+      <div class="upload-progress-bar"></div>
+    </div>
+    <div class="loading-spinner" v-if="loading">正在解析简历...</div>
   </section>
 
   <!-- ====== Step 2: Parsed Result + Extract ====== -->
@@ -67,11 +71,36 @@
       <pre>{{ cleanedText }}</pre>
     </details>
 
-    <!-- Extract Button -->
+    <!-- Extract Button (before extraction) -->
     <button v-if="step === 'parsed'" class="btn btn-primary" @click="doExtract" :disabled="loading">
-      {{ loading ? '提取中...' : 'AI 提取关键信息' }}
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      AI 提取关键信息
     </button>
-    <div class="loading-bar" v-if="step === 'extracting'">AI 正在提取关键信息...</div>
+
+    <!-- Extraction Animation -->
+    <div class="extract-stage" v-if="step === 'extracting'">
+      <div class="extract-orbital">
+        <div class="extract-orbital-ring"></div>
+        <div class="extract-orbital-ring"></div>
+        <div class="extract-orbital-ring"></div>
+        <div class="extract-orbital-core"></div>
+      </div>
+      <div class="extract-status-text">
+        {{ extractStatusText }}<span class="extract-dots"></span>
+      </div>
+
+      <!-- Skeleton placeholders -->
+      <div class="skeleton-grid" style="width:100%;">
+        <div class="skeleton-card"><div class="skeleton"></div><div class="skeleton"></div></div>
+        <div class="skeleton-card"><div class="skeleton"></div><div class="skeleton"></div></div>
+        <div class="skeleton-card"><div class="skeleton"></div><div class="skeleton"></div></div>
+        <div class="skeleton-card"><div class="skeleton"></div><div class="skeleton"></div></div>
+        <div class="skeleton-card"><div class="skeleton"></div><div class="skeleton"></div></div>
+        <div class="skeleton-card"><div class="skeleton"></div><div class="skeleton"></div></div>
+        <div class="skeleton-card wide"><div class="skeleton"></div><div class="skeleton"></div></div>
+        <div class="skeleton-card wide"><div class="skeleton"></div><div class="skeleton"></div></div>
+      </div>
+    </div>
 
     <!-- Extracted Info Cards -->
     <div class="info-grid" v-if="extractedInfo">
@@ -133,19 +162,20 @@
       <textarea id="jobDesc" v-model="jobDescription" rows="5"
                 placeholder="例：招聘高级前端工程师，要求 5 年以上经验，精通 Vue3/TypeScript，本科及以上学历，有大型项目架构经验..."></textarea>
       <button class="btn btn-primary" @click="doMatch" :disabled="loading || !jobDescription.trim()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         {{ loading ? '评分中...' : '开始匹配评分' }}
       </button>
-      <div class="loading-bar" v-if="step === 'matching'">AI 正在分析匹配度...</div>
+      <div class="loading-spinner" v-if="step === 'matching'">AI 正在分析匹配度...</div>
     </div>
 
     <!-- Match Result -->
     <div class="match-result" v-if="matchResult">
       <!-- Score Rings — hierarchical: 1 primary + 3 compact -->
       <div class="rings-row">
-        <score-ring label="综合评分" :value="matchResult.totalScore" color="var(--accent)" :primary="true"></score-ring>
-        <score-ring label="技能匹配" :value="matchResult.skillMatch" color="oklch(0.55 0.15 235)"></score-ring>
-        <score-ring label="经验相关" :value="matchResult.experienceMatch" color="oklch(0.62 0.16 75)"></score-ring>
-        <score-ring label="学历匹配" :value="matchResult.educationMatch" color="oklch(0.55 0.17 155)"></score-ring>
+        <score-ring label="综合评分" :value="displayScores.total" color="var(--accent)" :primary="true"></score-ring>
+        <score-ring label="技能匹配" :value="displayScores.skill" color="oklch(0.55 0.15 235)"></score-ring>
+        <score-ring label="经验相关" :value="displayScores.experience" color="oklch(0.62 0.16 75)"></score-ring>
+        <score-ring label="学历匹配" :value="displayScores.education" color="oklch(0.55 0.17 155)"></score-ring>
       </div>
 
       <!-- Summary -->
@@ -167,7 +197,7 @@
       </div>
 
       <!-- Re-match -->
-      <button class="btn btn-outline" v-if="step === 'matched'" @click="step = 'extracted'; matchResult = null; jobDescription = ''">
+      <button class="btn btn-outline" v-if="step === 'matched'" @click="resetMatch">
         更换岗位重新匹配
       </button>
     </div>

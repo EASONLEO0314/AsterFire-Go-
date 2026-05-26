@@ -20,18 +20,56 @@ const ScoreRing = {
         <circle cx="60" cy="60" r="50" fill="none" :stroke="color" stroke-width="9"
           stroke-linecap="round" :stroke-dasharray="dasharray" :stroke-dashoffset="dashoffset"
           class="ring-arc" transform="rotate(-90 60 60)"/>
-        <text x="60" y="56" text-anchor="middle" class="ring-value">{{ value }}</text>
+        <text x="60" y="56" text-anchor="middle" class="ring-value">{{ displayValue }}</text>
         <text x="60" y="74" text-anchor="middle" class="ring-unit">分</text>
       </svg>
       <span class="ring-label">{{ label }}</span>
     </div>
   `,
+  data() {
+    return { displayValue: 0 }
+  },
   computed: {
     circumference() { return 2 * Math.PI * 50 },
     dasharray() { return this.circumference },
-    dashoffset() { return this.circumference * (1 - this.value / 100) },
+    dashoffset() { return this.circumference * (1 - this.displayValue / 100) },
+  },
+  watch: {
+    value: {
+      handler(newVal) { this.animateValue(newVal) },
+      immediate: true,
+    },
+  },
+  methods: {
+    animateValue(target) {
+      const start = this.displayValue
+      const diff = target - start
+      if (diff === 0) return
+      const duration = 1000
+      const startTime = performance.now()
+      const step = (now) => {
+        const elapsed = now - startTime
+        const progress = Math.min(elapsed / duration, 1)
+        // ease-out-quart
+        const eased = 1 - Math.pow(1 - progress, 4)
+        this.displayValue = Math.round(start + diff * eased)
+        if (progress < 1) requestAnimationFrame(step)
+      }
+      requestAnimationFrame(step)
+    },
   },
 }
+
+/* ---- Extraction status messages ---- */
+const EXTRACT_MESSAGES = [
+  '正在解析简历结构',
+  '识别关键字段信息',
+  '提取个人基本信息',
+  '分析教育背景与学历',
+  '识别工作经历与项目',
+  '提取技术栈与技能标签',
+  '整理结构化数据',
+]
 
 /* ---- Root App ---- */
 const { createApp } = Vue
@@ -39,7 +77,7 @@ const app = createApp({
   data() {
     return {
       // workflow state
-      step: 'upload',      // upload | parsed | extracting | extracted | matching | matched
+      step: 'upload',
       loading: false,
       error: null,
 
@@ -51,10 +89,14 @@ const app = createApp({
 
       // extract
       extractedInfo: null,
+      extractStatusText: '',
+      _extractMsgIdx: 0,
+      _extractMsgTimer: null,
 
       // match
       jobDescription: '',
       matchResult: null,
+      displayScores: { total: 0, skill: 0, experience: 0, education: 0 },
 
       // api
       apiOnline: false,
@@ -70,6 +112,7 @@ const app = createApp({
   beforeUnmount() {
     clearInterval(this._healthTimer)
     clearTimeout(this._errorTimer)
+    clearInterval(this._extractMsgTimer)
   },
 
   methods: {
@@ -97,6 +140,16 @@ const app = createApp({
       this.apiOnline = false
     },
 
+    /* ---- Drop zone mouse tracking ---- */
+    onDropZoneMouseMove(e) {
+      const zone = e.currentTarget
+      const rect = zone.getBoundingClientRect()
+      const x = ((e.clientX - rect.left) / rect.width) * 100
+      const y = ((e.clientY - rect.top) / rect.height) * 100
+      zone.style.setProperty('--mx', x + '%')
+      zone.style.setProperty('--my', y + '%')
+    },
+
     /* ---- Upload ---- */
     triggerFileInput() { this.$refs.fileInput.click() },
     handleFileSelect(e) { const f = e.target.files[0]; if (f) this.uploadFile(f) },
@@ -107,7 +160,6 @@ const app = createApp({
     },
 
     async uploadFile(file) {
-      // 客户端预校验
       if (!file.name.toLowerCase().endsWith('.pdf')) return this.showError('仅支持 PDF 格式')
       if (file.size > 10 * 1024 * 1024) return this.showError('文件过大，请上传 ≤10MB 的 PDF')
 
@@ -129,10 +181,27 @@ const app = createApp({
     },
 
     /* ---- Extract ---- */
+    _startExtractAnimation() {
+      this._extractMsgIdx = 0
+      this.extractStatusText = EXTRACT_MESSAGES[0]
+      this._extractMsgTimer = setInterval(() => {
+        this._extractMsgIdx++
+        if (this._extractMsgIdx < EXTRACT_MESSAGES.length) {
+          this.extractStatusText = EXTRACT_MESSAGES[this._extractMsgIdx]
+        }
+      }, 600)
+    },
+
+    _stopExtractAnimation() {
+      clearInterval(this._extractMsgTimer)
+      this._extractMsgTimer = null
+    },
+
     async doExtract() {
       this.loading = true
       this.error = null
       this.step = 'extracting'
+      this._startExtractAnimation()
       try {
         const data = await this.api('/api/resume/extract', {
           method: 'POST',
@@ -144,6 +213,7 @@ const app = createApp({
         this.showError('AI 提取失败: ' + e.message)
         this.step = 'parsed'
       } finally {
+        this._stopExtractAnimation()
         this.loading = false
       }
     },
@@ -161,12 +231,28 @@ const app = createApp({
         })
         this.matchResult = data
         this.step = 'matched'
+        // Animate scores counting up
+        this.$nextTick(() => {
+          this.displayScores = {
+            total: data.totalScore || 0,
+            skill: data.skillMatch || 0,
+            experience: data.experienceMatch || 0,
+            education: data.educationMatch || 0,
+          }
+        })
       } catch (e) {
         this.showError('匹配评分失败: ' + e.message)
         this.step = 'extracted'
       } finally {
         this.loading = false
       }
+    },
+
+    resetMatch() {
+      this.step = 'extracted'
+      this.matchResult = null
+      this.jobDescription = ''
+      this.displayScores = { total: 0, skill: 0, experience: 0, education: 0 }
     },
 
     showError(msg) {
