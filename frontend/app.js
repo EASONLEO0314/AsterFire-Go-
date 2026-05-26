@@ -2,7 +2,7 @@
    AI 智能简历分析系统 — Vue 3 应用逻辑
    ============================================================ */
 
-const API_BASE = window.API_BASE || 'http://localhost:5001'
+const API_BASE = window.API_BASE || 'http://39.105.105.248'
 
 /* ---- Score Ring 组件 ---- */
 const ScoreRing = {
