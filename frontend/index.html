@@ -45,7 +45,9 @@
          @drop.prevent="handleDrop"
          @click="triggerFileInput">
       <input type="file" ref="fileInput" accept=".pdf" @change="handleFileSelect" hidden>
-      <div class="upload-icon">&#128196;</div>
+      <div class="upload-icon">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+      </div>
       <p class="upload-title">点击上传或拖拽 PDF 简历到此处</p>
       <p class="upload-hint">支持 .pdf 格式，≤10MB，≤10页</p>
     </div>
@@ -73,7 +75,7 @@
 
     <!-- Extracted Info Cards -->
     <div class="info-grid" v-if="extractedInfo">
-      <h3 style="grid-column:1/-1;margin:0;">提取信息</h3>
+      <div class="info-section-title">提取信息</div>
       <div class="info-card">
         <div class="info-label">姓名</div>
         <div class="info-value">{{ extractedInfo.name || '—' }}</div>
@@ -138,12 +140,12 @@
 
     <!-- Match Result -->
     <div class="match-result" v-if="matchResult">
-      <!-- Score Rings -->
+      <!-- Score Rings — hierarchical: 1 primary + 3 compact -->
       <div class="rings-row">
-        <score-ring label="综合评分" :value="matchResult.totalScore" color="#4f46e5"></score-ring>
-        <score-ring label="技能匹配" :value="matchResult.skillMatch" color="#0891b2"></score-ring>
-        <score-ring label="经验相关" :value="matchResult.experienceMatch" color="#d97706"></score-ring>
-        <score-ring label="学历匹配" :value="matchResult.educationMatch" color="#059669"></score-ring>
+        <score-ring label="综合评分" :value="matchResult.totalScore" color="var(--accent)" :primary="true"></score-ring>
+        <score-ring label="技能匹配" :value="matchResult.skillMatch" color="oklch(0.55 0.15 235)"></score-ring>
+        <score-ring label="经验相关" :value="matchResult.experienceMatch" color="oklch(0.62 0.16 75)"></score-ring>
+        <score-ring label="学历匹配" :value="matchResult.educationMatch" color="oklch(0.55 0.17 155)"></score-ring>
       </div>
 
       <!-- Summary -->

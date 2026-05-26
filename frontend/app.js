@@ -7,12 +7,17 @@ const API_BASE = window.API_BASE || 'http://39.105.105.248'
 /* ---- Score Ring 组件 ---- */
 const ScoreRing = {
   name: 'ScoreRing',
-  props: { label: String, value: { type: Number, default: 0 }, color: String },
+  props: {
+    label: String,
+    value: { type: Number, default: 0 },
+    color: String,
+    primary: { type: Boolean, default: false },
+  },
   template: `
-    <div class="ring-container">
+    <div class="ring-container" :class="{ primary }">
       <svg viewBox="0 0 120 120" class="ring-svg">
-        <circle cx="60" cy="60" r="50" fill="none" stroke="#e5e7eb" stroke-width="10"/>
-        <circle cx="60" cy="60" r="50" fill="none" :stroke="color" stroke-width="10"
+        <circle cx="60" cy="60" r="50" fill="none" stroke="var(--border-light)" stroke-width="9"/>
+        <circle cx="60" cy="60" r="50" fill="none" :stroke="color" stroke-width="9"
           stroke-linecap="round" :stroke-dasharray="dasharray" :stroke-dashoffset="dashoffset"
           class="ring-arc" transform="rotate(-90 60 60)"/>
         <text x="60" y="56" text-anchor="middle" class="ring-value">{{ value }}</text>
@@ -53,22 +58,29 @@ const app = createApp({
 
       // api
       apiOnline: false,
+      _errorTimer: null,
     }
   },
 
   created() {
     this.checkApiStatus()
+    this._healthTimer = setInterval(() => this.checkApiStatus(), 30000)
+  },
+
+  beforeUnmount() {
+    clearInterval(this._healthTimer)
+    clearTimeout(this._errorTimer)
   },
 
   methods: {
     /* ---- API helpers ---- */
     async api(path, opts = {}) {
       const url = API_BASE + path
+      const isFormData = opts.body instanceof FormData
       const res = await fetch(url, {
-        headers: { ...(opts.headers || {}) },
         ...opts,
-        headers: opts.body instanceof FormData
-          ? opts.headers || {}
+        headers: isFormData
+          ? (opts.headers || {})
           : { 'Content-Type': 'application/json', ...(opts.headers || {}) },
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -79,7 +91,7 @@ const app = createApp({
 
     async checkApiStatus() {
       try {
-        const res = await fetch(API_BASE + '/api/cache/stats')
+        const res = await fetch(API_BASE + '/api/health')
         if (res.ok) { this.apiOnline = true; return }
       } catch (_) { /* offline */ }
       this.apiOnline = false
@@ -157,7 +169,11 @@ const app = createApp({
       }
     },
 
-    showError(msg) { this.error = msg; setTimeout(() => { this.error = null }, 8000) },
+    showError(msg) {
+      this.error = msg
+      clearTimeout(this._errorTimer)
+      this._errorTimer = setTimeout(() => { this.error = null }, 8000)
+    },
   },
 })
 
